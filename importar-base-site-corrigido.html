@@ -1,843 +1,124 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Importar Base do Site — NEXAPRINT</title>
-
 <style>
-body{
-  font-family:Inter,Arial,sans-serif;
-  background:#0b1120;
-  color:#e2e8f0;
-  margin:0;
-  padding:32px
-}
-
-main{
-  max-width:900px;
-  margin:auto
-}
-
-.card{
-  background:#111827;
-  border:1px solid #243244;
-  border-radius:16px;
-  padding:24px;
-  margin-bottom:18px
-}
-
-h1{
-  margin-top:0;
-  color:#fff
-}
-
-.muted{
-  color:#94a3b8
-}
-
-.ok{
-  color:#2dd4bf
-}
-
-.err{
-  color:#f87171
-}
-
-button{
-  background:#00d2c4;
-  color:#061016;
-  border:0;
-  border-radius:10px;
-  padding:12px 18px;
-  font-weight:800;
-  cursor:pointer
-}
-
-button:disabled{
-  opacity:.5;
-  cursor:not-allowed
-}
-
-input[type=file]{
-  width:100%;
-  padding:12px;
-  background:#0b1120;
-  border:1px dashed #475569;
-  border-radius:10px;
-  color:#cbd5e1;
-  box-sizing:border-box
-}
-
-progress{
-  width:100%;
-  height:18px
-}
-
-pre{
-  white-space:pre-wrap;
-  font-size:13px
-}
+body{font-family:Inter,Arial,sans-serif;background:#0b1120;color:#e2e8f0;margin:0;padding:32px}
+main{max-width:900px;margin:auto}.card{background:#111827;border:1px solid #243244;border-radius:16px;padding:24px;margin-bottom:18px}
+h1{margin-top:0;color:#fff}.muted{color:#94a3b8}.ok{color:#2dd4bf}.err{color:#f87171}
+button{background:#00d2c4;color:#061016;border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}input[type=file]{width:100%;padding:12px;background:#0b1120;border:1px dashed #475569;border-radius:10px;color:#cbd5e1;box-sizing:border-box}
+progress{width:100%;height:18px}pre{white-space:pre-wrap;font-size:13px}
 </style>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
 </head>
-
-<body>
-
-<main>
-
+<body><main>
 <div class="card">
-
 <h1>Importar Base do Site — NEXAPRINT</h1>
-
-<p class="muted">
-Importa a planilha preparada para a estrutura real do catálogo NEXAPRINT.
-</p>
-
+<p class="muted">Importa a aba BASE FINAL da base mestre, incluindo produtos, preços, imagens e gabaritos.</p>
 <p id="auth">Verificando acesso...</p>
-
 </div>
-
-
 <div class="card">
-
-<label>
-<strong>Selecione NEXAPRINT_IMPORTACAO_SITE.xlsx</strong>
-</label>
-
-<br><br>
-
-<input
-  id="file"
-  type="file"
-  accept=".xlsx,.xls"
-  disabled
->
-
-<p id="preview" class="muted">
-Nenhum arquivo selecionado.
-</p>
-
-<button id="import" disabled>
-Importar catálogo para o site
-</button>
-
+<label><strong>Selecione NEXAPRINT_BASE_MESTRA_CORRIGIDA.xlsx</strong></label>
+<br><br><input id="file" type="file" accept=".xlsx,.xls" disabled>
+<p id="preview" class="muted">Nenhum arquivo selecionado.</p>
+<button id="import" disabled>Importar catálogo para o site</button>
 </div>
-
-
 <div class="card">
-
 <progress id="progress" value="0" max="100"></progress>
-
-<p id="status" class="muted">
-Aguardando.
-</p>
-
+<p id="status" class="muted">Aguardando.</p>
 <pre id="log"></pre>
-
 </div>
-
 </main>
-
-
 <script>
-
-/* =========================================================
-   SUPABASE
-========================================================= */
-
-const SUPABASE_URL =
-  'https://mawebqqjpzfkzuwuwopk.supabase.co';
-
-const SUPABASE_PUBLISHABLE_KEY =
-  'sb_publishable_ElKoJ-b1wV8Lv_2u5mlDIw_9-btNI9A';
-
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
-);
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-const $ = id => document.getElementById(id);
-
-let rows = [];
-
-
-function clean(value){
-
-  if(value === null || value === undefined){
-    return '';
-  }
-
-  return String(value).trim();
-
-}
-
-
-function norm(value){
-
-  return clean(value)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9]+/g,'-')
-    .replace(/^-|-$/g,'');
-
-}
-
-
-function num(value){
-
-  if(typeof value === 'number'){
-    return Number.isFinite(value) ? value : null;
-  }
-
-  if(value === null || value === undefined || value === ''){
-    return null;
-  }
-
-  let s = String(value)
-    .replace(/R\$\s?/g,'')
-    .replace(/\./g,'')
-    .replace(',','.');
-
-  const n = Number(s);
-
-  return Number.isFinite(n) ? n : null;
-
-}
-
-
-/* =========================================================
-   AUTENTICAÇÃO
-========================================================= */
+const SUPABASE_URL='https://mawebqqjpzfkzuwuwopk.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ElKoJ-b1wV8Lv_2u5mlDIw_9-btNI9A';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=id=>document.getElementById(id);
+let rows=[];
+const clean=v=>v==null?'':String(v).trim();
+const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function num(v){if(typeof v==='number')return Number.isFinite(v)?v:null;if(v==null||v==='')return null;let s=String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.');let n=Number(s);return Number.isFinite(n)?n:null}
+function col(row,names){const keys=Object.keys(row);for(const n of names){const k=keys.find(x=>norm(x)===norm(n));if(k)return k}return null}
+function val(row,names){const k=col(row,names);return k?clean(row[k]):''}
+function validUrl(v){return /^https?:\/\//i.test(clean(v))}
+function firstUrl(v){return clean(v).split(/\s*\|\s*/)[0].trim()}
+function chunks(a,n){const out=[];for(let i=0;i<a.length;i+=n)out.push(a.slice(i,i+n));return out}
 
 async function init(){
-
-  try{
-
-    const {
-      data:{session},
-      error
-    } = await db.auth.getSession();
-
-
-    if(error){
-
-      $('auth').innerHTML =
-        '<span class="err">' +
-        error.message +
-        '</span>';
-
-      return;
-    }
-
-
-    if(!session){
-
-      $('auth').innerHTML =
-        '<span class="err">' +
-        'Faça login no Painel Administrativo e abra este importador em outra aba.' +
-        '</span>';
-
-      return;
-    }
-
-
-    const profile = await db
-      .from('profiles')
-      .select('is_admin')
-      .eq('id',session.user.id)
-      .maybeSingle();
-
-
-    if(profile.error){
-
-      $('auth').innerHTML =
-        '<span class="err">' +
-        profile.error.message +
-        '</span>';
-
-      return;
-    }
-
-
-    if(!profile.data || profile.data.is_admin !== true){
-
-      $('auth').innerHTML =
-        '<span class="err">' +
-        'Esta conta não possui permissão de administrador.' +
-        '</span>';
-
-      return;
-    }
-
-
-    $('auth').innerHTML =
-      '<span class="ok">' +
-      'Acesso administrativo autorizado.' +
-      '</span>';
-
-
-    $('file').disabled = false;
-
-
-  }catch(error){
-
-    $('auth').innerHTML =
-      '<span class="err">' +
-      error.message +
-      '</span>';
-
-  }
-
+ try{
+  const {data:{session},error}=await db.auth.getSession();
+  if(error)throw error;
+  if(!session){$('auth').innerHTML='<span class="err">Faça login no Painel Administrativo e abra este importador em outra aba.</span>';return}
+  const p=await db.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();
+  if(p.error)throw p.error;
+  if(!p.data||p.data.is_admin!==true){$('auth').innerHTML='<span class="err">Esta conta não possui permissão de administrador.</span>';return}
+  $('auth').innerHTML='<span class="ok">Acesso administrativo autorizado.</span>';
+  $('file').disabled=false;
+ }catch(e){$('auth').innerHTML='<span class="err">'+clean(e.message)+'</span>'}
 }
 
-
-/* =========================================================
-   LEITURA DA PLANILHA
-========================================================= */
-
-$('file').addEventListener('change',async function(e){
-
-  const file = e.target.files[0];
-
-  if(!file){
-    return;
-  }
-
-
-  try{
-
-    $('preview').textContent =
-      'Lendo planilha...';
-
-
-    const workbook =
-      XLSX.read(
-        await file.arrayBuffer(),
-        {type:'array'}
-      );
-
-
-    const sheet =
-      workbook.Sheets['IMPORT_CONFIGURACOES'];
-
-
-    if(!sheet){
-
-      throw new Error(
-        'A aba IMPORT_CONFIGURACOES não foi encontrada.'
-      );
-
-    }
-
-
-    rows =
-      XLSX.utils.sheet_to_json(
-        sheet,
-        {defval:null}
-      );
-
-
-    if(!rows.length){
-
-      throw new Error(
-        'A aba IMPORT_CONFIGURACOES está vazia.'
-      );
-
-    }
-
-
-    const required = [
-
-      'configuration_id',
-      'product_name',
-      'category',
-      'configuration',
-      'size',
-      'material',
-      'printing',
-      'finish',
-      'production_days',
-      'quantity',
-      'cost_price',
-      'markup_percent',
-      'sale_price',
-      'source_url',
-      'image_url'
-
-    ];
-
-
-    const missing =
-      required.filter(
-        column => !(column in rows[0])
-      );
-
-
-    if(missing.length){
-
-      throw new Error(
-        'Colunas ausentes: ' +
-        missing.join(', ')
-      );
-
-    }
-
-
-    const products =
-      new Set();
-
-
-    const variants =
-      new Set();
-
-
-    rows.forEach(row => {
-
-      const productKey =
-        norm(row.product_name) +
-        '-' +
-        norm(row.category);
-
-
-      products.add(productKey);
-
-
-      const variantKey = [
-
-        row.product_name,
-        row.category,
-        row.configuration,
-        row.size,
-        row.material,
-        row.printing,
-        row.finish
-
-      ]
-      .map(norm)
-      .join('|');
-
-
-      variants.add(variantKey);
-
-    });
-
-
-    $('preview').innerHTML =
-      '<span class="ok">' +
-      rows.length.toLocaleString('pt-BR') +
-      ' configurações/preços lidos.</span> ' +
-
-      products.size.toLocaleString('pt-BR') +
-      ' produtos e ' +
-
-      variants.size.toLocaleString('pt-BR') +
-      ' configurações únicas.';
-
-
-    $('log').textContent =
-      'Planilha carregada com sucesso.\n\n' +
-
-      'Tabela de destino: public.products\n' +
-
-      'Produtos únicos: ' +
-      products.size.toLocaleString('pt-BR') +
-
-      '\nConfigurações únicas: ' +
-      variants.size.toLocaleString('pt-BR');
-
-
-    $('import').disabled = false;
-
-
-  }catch(error){
-
-    rows = [];
-
-    $('preview').innerHTML =
-      '<span class="err">' +
-      error.message +
-      '</span>';
-
-    $('import').disabled = true;
-
-  }
-
+$('file').addEventListener('change',async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  $('preview').textContent='Lendo BASE FINAL...';
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+  const sheet=wb.Sheets['BASE FINAL'];
+  if(!sheet)throw Error('A aba BASE FINAL não foi encontrada.');
+  rows=XLSX.utils.sheet_to_json(sheet,{defval:''});
+  if(!rows.length)throw Error('A aba BASE FINAL está vazia.');
+  const required=['Produto','Categoria NEXAPRINT','Variação / Configuração','Tamanho','Material / Papel','Impressão','Acabamento','Prazo Produção (dias)','Quantidade','Preço Venda Sugerido (R$)','URL da Imagem','URL do Gabarito'];
+  const missing=required.filter(n=>!col(rows[0],[n]));
+  if(missing.length)throw Error('Colunas ausentes na BASE FINAL: '+missing.join(', '));
+  const products=new Set(rows.map(r=>norm(val(r,['Produto']))+'-'+norm(val(r,['Categoria NEXAPRINT']))));
+  const variants=new Set(rows.map(r=>[val(r,['Produto']),val(r,['Categoria NEXAPRINT']),val(r,['Variação / Configuração']),val(r,['Tamanho']),val(r,['Material / Papel']),val(r,['Impressão']),val(r,['Acabamento'])].map(norm).join('|')));
+  const imgs=rows.filter(r=>validUrl(firstUrl(val(r,['URL da Imagem','URL da Imagem Coletada'])))).length;
+  const gabs=rows.filter(r=>validUrl(firstUrl(val(r,['URL do Gabarito Direto','URL do Gabarito'])))).length;
+  $('preview').innerHTML='<span class="ok">'+rows.length.toLocaleString('pt-BR')+' linhas lidas.</span> '+products.size.toLocaleString('pt-BR')+' produtos, '+variants.size.toLocaleString('pt-BR')+' configurações, '+imgs.toLocaleString('pt-BR')+' imagens e '+gabs.toLocaleString('pt-BR')+' linhas com gabarito.';
+  $('log').textContent='BASE FINAL carregada.\n\nProdutos únicos: '+products.size.toLocaleString('pt-BR')+'\nConfigurações únicas: '+variants.size.toLocaleString('pt-BR')+'\nImagens com URL: '+imgs.toLocaleString('pt-BR')+'\nGabaritos com URL: '+gabs.toLocaleString('pt-BR')+'\n\nDestino: public.products';
+  $('import').disabled=false;
+ }catch(e){rows=[];$('preview').innerHTML='<span class="err">'+clean(e.message)+'</span>';$('import').disabled=true}
 });
 
-
-/* =========================================================
-   IMPORTAÇÃO
-========================================================= */
-
-$('import').onclick = async function(){
-
-  if(!rows.length){
-
-    alert('Nenhuma planilha foi carregada.');
-
-    return;
-
+$('import').onclick=async()=>{
+ try{
+  $('import').disabled=true;$('progress').value=5;$('status').textContent='Organizando produtos...';
+  const map=new Map();
+  for(const r of rows){
+   const name=val(r,['Produto']);const category=val(r,['Categoria NEXAPRINT']);
+   const id=norm(name)+'-'+norm(category);
+   const image=firstUrl(val(r,['URL da Imagem','URL da Imagem Coletada']));
+   const gab=firstUrl(val(r,['URL do Gabarito Direto','URL do Gabarito']));
+   const page=val(r,['Página para Gabarito']);
+   const source=val(r,['URL da Página Atual Card']);
+   if(!map.has(id))map.set(id,{id,name,category,base_price:num(val(r,['Preço Venda Sugerido (R$)','Preço Venda Sugerido'])),img:image||null,template_url:gab||null,quantities:[],options:{structuredVariants:[]}});
+   const p=map.get(id);
+   if(!p.img&&image)p.img=image;
+   if(!p.template_url&&gab)p.template_url=gab;
+   const vk=[val(r,['Variação / Configuração']),val(r,['Tamanho']),val(r,['Material / Papel']),val(r,['Impressão']),val(r,['Acabamento'])].map(norm).join('|');
+   let v=p.options.structuredVariants.find(x=>x.__key===vk);
+   if(!v){v={__key:vk,configuration:val(r,['Variação / Configuração']),size:val(r,['Tamanho']),material:val(r,['Material / Papel']),printing:val(r,['Impressão']),finish:val(r,['Acabamento']),templateUrl:gab||null,templatePage:page||null,sourceUrl:source||null,quantities:[]};p.options.structuredVariants.push(v)}
+   if(!v.templateUrl&&gab)v.templateUrl=gab;
+   if(!v.templatePage&&page)v.templatePage=page;
+   v.quantities.push({qty:Math.round(num(val(r,['Quantidade']))||0),price:num(val(r,['Preço Venda Sugerido (R$)','Preço Venda Sugerido'])),cost_price:num(val(r,['Custo Atual Card (R$)','Custo Atual Card'])),markup_percent:num(val(r,['Markup (%)','Markup'])),days:Math.round(num(val(r,['Prazo Produção (dias)','Prazo Produção']))||0)});
   }
-
-
-  try{
-
-    $('import').disabled = true;
-
-    $('progress').value = 5;
-
-    $('status').textContent =
-      'Preparando catálogo...';
-
-
-    /* ---------------------------------------------
-       AGRUPA OS PRODUTOS
-    --------------------------------------------- */
-
-    const productMap =
-      new Map();
-
-
-    rows.forEach(row => {
-
-      const productId =
-        norm(row.product_name) +
-        '-' +
-        norm(row.category);
-
-
-      if(!productMap.has(productId)){
-
-        productMap.set(
-          productId,
-          {
-
-            id: productId,
-
-            name:
-              clean(row.product_name),
-
-            category:
-              clean(row.category),
-
-            base_price:
-              num(row.sale_price),
-
-            img:
-              clean(row.image_url) || null,
-
-            quantities: [],
-
-            template_url:
-              clean(row.source_url) || null,
-
-            options: {
-
-              structuredVariants: []
-
-            }
-
-          }
-        );
-
-      }
-
-
-      const product =
-        productMap.get(productId);
-
-
-      /* ---------------------------------------------
-         IDENTIFICA A CONFIGURAÇÃO
-      --------------------------------------------- */
-
-      const variantKey = [
-
-        row.configuration,
-        row.size,
-        row.material,
-        row.printing,
-        row.finish
-
-      ]
-      .map(norm)
-      .join('|');
-
-
-      let variant =
-        product.options.structuredVariants
-          .find(v => v.__key === variantKey);
-
-
-      if(!variant){
-
-        variant = {
-
-          __key:
-            variantKey,
-
-          configuration:
-            clean(row.configuration),
-
-          size:
-            clean(row.size),
-
-          material:
-            clean(row.material),
-
-          printing:
-            clean(row.printing),
-
-          finish:
-            clean(row.finish),
-
-          quantities: []
-
-        };
-
-
-        product.options.structuredVariants.push(
-          variant
-        );
-
-      }
-
-
-      /* ---------------------------------------------
-         PREÇO / QUANTIDADE / PRAZO
-      --------------------------------------------- */
-
-      variant.quantities.push({
-
-        qty:
-          Math.round(
-            num(row.quantity) || 0
-          ),
-
-        price:
-          num(row.sale_price),
-
-        cost_price:
-          num(row.cost_price),
-
-        markup_percent:
-          num(row.markup_percent),
-
-        days:
-          Math.round(
-            num(row.production_days) || 0
-          )
-
-      });
-
-    });
-
-
-    $('progress').value = 30;
-
-    $('status').textContent =
-      'Produtos organizados.';
-
-
-    /* ---------------------------------------------
-       LIMPA CHAVES INTERNAS
-    --------------------------------------------- */
-
-    const data =
-      Array.from(productMap.values())
-        .map(product => {
-
-          product.options.structuredVariants =
-            product.options.structuredVariants
-              .map(variant => {
-
-                const cleanVariant = {
-                  configuration:
-                    variant.configuration,
-
-                  size:
-                    variant.size,
-
-                  material:
-                    variant.material,
-
-                  printing:
-                    variant.printing,
-
-                  finish:
-                    variant.finish,
-
-                  quantities:
-                    variant.quantities
-
-                };
-
-                return cleanVariant;
-
-              });
-
-
-          return product;
-
-        });
-
-
-    $('progress').value = 45;
-
-
-    $('status').textContent =
-      'Gravando produtos no banco...';
-
-
-    $('log').textContent +=
-      '\n\nIniciando gravação em public.products...';
-
-
-    /* ---------------------------------------------
-       ENVIA EM LOTES DE 100
-    --------------------------------------------- */
-
-    const batchSize = 100;
-
-    const totalBatches =
-      Math.ceil(data.length / batchSize);
-
-
-    for(
-      let i = 0;
-      i < data.length;
-      i += batchSize
-    ){
-
-      const batch =
-        data.slice(
-          i,
-          i + batchSize
-        );
-
-
-      const result =
-        await db
-          .from('products')
-          .upsert(
-            batch,
-            {
-              onConflict:'id'
-            }
-          );
-
-
-      if(result.error){
-
-        throw new Error(
-          'products — lote ' +
-          (Math.floor(i / batchSize) + 1) +
-          ': ' +
-          result.error.message
-        );
-
-      }
-
-
-      const completed =
-        Math.min(
-          i + batch.length,
-          data.length
-        );
-
-
-      const percent =
-        45 +
-        Math.round(
-          (completed / data.length) * 50
-        );
-
-
-      $('progress').value =
-        percent;
-
-
-      $('status').textContent =
-        'Gravando produtos: ' +
-        completed.toLocaleString('pt-BR') +
-        ' de ' +
-        data.length.toLocaleString('pt-BR');
-
-    }
-
-
-    /* ---------------------------------------------
-       FINALIZA
-    --------------------------------------------- */
-
-    $('progress').value = 100;
-
-
-    $('status').innerHTML =
-      '<span class="ok">' +
-      'Importação concluída com sucesso.' +
-      '</span>';
-
-
-    $('log').textContent +=
-      '\n\nIMPORTAÇÃO CONCLUÍDA.\n' +
-
-      'Produtos gravados: ' +
-      data.length.toLocaleString('pt-BR') +
-
-      '\nConfigurações incorporadas em:' +
-
-      '\noptions.structuredVariants';
-
-
-    alert(
-      'Importação concluída!\n\n' +
-      'Produtos: ' +
-      data.length.toLocaleString('pt-BR')
-    );
-
-
-  }catch(error){
-
-    $('status').innerHTML =
-      '<span class="err">' +
-      'A importação foi interrompida.' +
-      '</span>';
-
-
-    $('log').textContent +=
-      '\n\nERRO: ' +
-      error.message;
-
-
-    alert(error.message);
-
-
-    $('import').disabled = false;
-
+  const data=[...map.values()].map(p=>{p.options.structuredVariants=p.options.structuredVariants.map(v=>{const x={...v};delete x.__key;return x});return p});
+  $('progress').value=25;$('status').textContent='Gravando '+data.length.toLocaleString('pt-BR')+' produtos...';
+  const batches=chunks(data,100);
+  for(let i=0;i<batches.length;i++){
+   const r=await db.from('products').upsert(batches[i],{onConflict:'id'});
+   if(r.error)throw Error('products — lote '+(i+1)+': '+r.error.message);
+   $('progress').value=25+Math.round(((i+1)/batches.length)*75);
+   $('status').textContent='Gravando produtos: '+Math.min((i+1)*100,data.length).toLocaleString('pt-BR')+' de '+data.length.toLocaleString('pt-BR');
   }
-
+  $('progress').value=100;$('status').innerHTML='<span class="ok">Importação concluída com sucesso.</span>';
+  $('log').textContent+='\n\nIMPORTAÇÃO CONCLUÍDA.\nProdutos gravados: '+data.length.toLocaleString('pt-BR')+'\nImagens e gabaritos incorporados em cada produto/variação.';
+  alert('Importação concluída!\n\nProdutos: '+data.length.toLocaleString('pt-BR'));
+ }catch(e){$('status').innerHTML='<span class="err">A importação foi interrompida.</span>';$('log').textContent+='\n\nERRO: '+clean(e.message);alert(e.message);$('import').disabled=false}
 };
-
-
-/* =========================================================
-   INICIA
-========================================================= */
-
 init();
-
 </script>
-
 </body>
 </html>
