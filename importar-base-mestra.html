@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXAPRINT — Importar Base Mestra</title>
+<style>
+body{font-family:Inter,Arial,sans-serif;background:#0b1120;color:#e2e8f0;margin:0;padding:32px}
+main{max-width:900px;margin:auto}.card{background:#111827;border:1px solid #243244;border-radius:16px;padding:24px;margin-bottom:18px}
+h1{margin-top:0;color:#fff}.muted{color:#94a3b8}.ok{color:#2dd4bf}.warn{color:#fbbf24}.err{color:#f87171}
+button{background:#00d2c4;color:#061016;border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}input[type=file]{width:100%;padding:12px;background:#0b1120;border:1px dashed #475569;border-radius:10px;color:#cbd5e1}
+progress{width:100%;height:18px}pre{white-space:pre-wrap}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body><main>
+<div class="card"><h1>Importar Base Mestra — NEXAPRINT</h1>
+<p class="muted">Importa a BASE FINAL da planilha mestre para o catálogo estruturado do site: produtos, configurações/variantes e faixas de preço.</p>
+<p id="auth">Verificando acesso...</p></div>
+<div class="card">
+<label><strong>Selecione NEXAPRINT_BASE_MESTRA_GABARITOS.xlsx</strong></label>
+<input id="file" type="file" accept=".xlsx,.xls">
+<p id="preview" class="muted">Nenhum arquivo selecionado.</p>
+<button id="import" disabled>Importar base mestra</button>
+</div>
+<div class="card"><progress id="progress" value="0" max="100"></progress><p id="status" class="muted">Aguardando.</p><pre id="log"></pre></div>
+</main>
+<script>
+const SUPABASE_URL='https://mawebqqjpzfkzuwuwopk.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ElKoJ-b1wV8Lv_2u5mlDIw_9-btNI9A';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=id=>document.getElementById(id), logEl=$('log');
+let rows=[], session=null;
+function log(s){logEl.textContent+=s+'\\n';}
+function clean(v){return v==null?'':String(v).trim()}
+function norm(v){return clean(v).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+function num(v){if(typeof v==='number')return v;if(!v)return null;let s=String(v).replace(/R\\$\\s?/g,'').replace(/\\./g,'').replace(',','.');let n=Number(s);return Number.isFinite(n)?n:null}
+function chunks(a,n){let o=[];for(let i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o}
+async function init(){
+ const r=await db.auth.getSession(); session=r.data.session;
+ if(!session){$('auth').innerHTML='<span class="err">Faça login como administradora no site.</span>';return}
+ const p=await db.from('profiles').select('is_admin,name').eq('id',session.user.id).maybeSingle();
+ if(p.error||!p.data?.is_admin){$('auth').innerHTML='<span class="err">Acesso negado.</span>';return}
+ $('auth').innerHTML='<span class="ok">Acesso autorizado.</span>'; $('file').disabled=false;
+}
+$('file').addEventListener('change',async e=>{
+ const f=e.target.files[0]; if(!f)return;
+ try{
+  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+  const ws=wb.Sheets['BASE FINAL']; if(!ws)throw Error('A aba BASE FINAL não foi encontrada.');
+  rows=XLSX.utils.sheet_to_json(ws,{defval:null});
+  if(!rows.length)throw Error('A aba BASE FINAL está vazia.');
+  const required=['Produto','Categoria NEXAPRINT','Variação / Configuração','Tamanho','Material / Papel','Impressão','Acabamento','Prazo Produção (dias)','Quantidade','Custo Atual Card (R$)','Markup (%)','Preço Venda Sugerido (R$)','URL da Imagem','URL da Página Atual Card'];
+  const missing=required.filter(x=>!(x in rows[0])); if(missing.length)throw Error('Colunas ausentes: '+missing.join(', '));
+  $('preview').innerHTML='<span class="ok">'+rows.length.toLocaleString('pt-BR')+' linhas lidas da BASE FINAL.</span>';
+  $('import').disabled=false;
+ }catch(err){$('preview').innerHTML='<span class="err">'+err.message+'</span>';rows=[];$('import').disabled=true}
+});
+async function upsertBatches(table,data,key){
+ for(const [i,b] of chunks(data,100).entries()){
+  const r=await db.from(table).upsert(b,{onConflict:key});
+  if(r.error)throw Error(table+' — lote '+(i+1)+': '+r.error.message);
+ }
+}
+$('import').onclick=async()=>{
+ if(!rows.length)return;
+ if(!confirm('Importar '+rows.length.toLocaleString('pt-BR')+' configurações da BASE FINAL para o catálogo estruturado?'))return;
+ $('import').disabled=true; $('progress').value=0; logEl.textContent='';
+ try{
+  const productsMap=new Map(), variantsMap=new Map();
+  for(const r of rows){
+   const product=clean(r['Produto']), cat=clean(r['Categoria NEXAPRINT']);
+   if(!product)continue;
+   const pk=norm(product)+'-'+norm(cat);
+   productsMap.set(pk,{chave_produto:pk,nome:product,categoria:cat||null,url_pagina_atual_card:clean(r['URL da Página Atual Card'])||null});
+   const vk=[pk,r['Variação / Configuração'],r['Tamanho'],r['Material / Papel'],r['Impressão'],r['Acabamento']].map(norm).join('|');
+   variantsMap.set(vk,{chave_variante:vk,product_key:pk,configuracao:clean(r['Variação / Configuração'])||null,tamanho:clean(r['Tamanho'])||null,material:clean(r['Material / Papel'])||null,impressao:clean(r['Impressão'])||null,acabamento:clean(r['Acabamento'])||null,prazo_producao_dias:num(r['Prazo Produção (dias)']),peso:num(r['Peso']),url_imagem:clean(r['URL da Imagem'])||null});
+  }
+  log('Produtos únicos: '+productsMap.size); log('Configurações únicas: '+variantsMap.size);
+  await upsertBatches('nexaprint_produtos',[...productsMap.values()].map(x=>({chave_produto:x.chave_produto,nome:x.nome,categoria:x.categoria,url_pagina_atual_card:x.url_pagina_atual_card})),'chave_produto');
+  $('progress').value=25; log('Produtos importados.');
+  const keys=[...productsMap.keys()], ids={};
+  for(const b of chunks(keys,100)){
+   const q=await db.from('nexaprint_produtos').select('id,chave_produto').in('chave_produto',b);
+   if(q.error)throw Error(q.error.message); (q.data||[]).forEach(x=>ids[x.chave_produto]=x.id);
+  }
+  const variants=[...variantsMap.values()].map(v=>({produto_id:ids[v.product_key],chave_variante:v.chave_variante,configuracao:v.configuracao,tamanho:v.tamanho,material:v.material,impressao:v.impressao,acabamento:v.acabamento,prazo_producao_dias:v.prazo_producao_dias,peso:v.peso,url_imagem:v.url_imagem})).filter(v=>v.produto_id);
+  await upsertBatches('nexaprint_variantes',variants,'chave_variante');
+  $('progress').value=50; log('Variantes importadas.');
+  const vkeys=variants.map(v=>v.chave_variante), vids={};
+  for(const b of chunks(vkeys,100)){const q=await db.from('nexaprint_variantes').select('id,chave_variante').in('chave_variante',b);if(q.error)throw Error(q.error.message);(q.data||[]).forEach(x=>vids[x.chave_variante]=x.id)}
+  // Replace price ranges for every imported variant, then insert all 25k+ rows.
+  for(const b of chunks(Object.values(vids),100)){const d=await db.from('nexaprint_faixas_preco').delete().in('variante_id',b);if(d.error)throw Error('Limpeza de preços: '+d.error.message)}
+  const prices=rows.map(r=>{
+   const product=clean(r['Produto']),cat=clean(r['Categoria NEXAPRINT']),pk=norm(product)+'-'+norm(cat);
+   const vk=[pk,r['Variação / Configuração'],r['Tamanho'],r['Material / Papel'],r['Impressão'],r['Acabamento']].map(norm).join('|');
+   return {variante_id:vids[vk],quantidade:Math.round(num(r['Quantidade'])||0),custo_lote_centavos:Math.round((num(r['Custo Atual Card (R$)'])||0)*100),markup_percentual:num(r['Markup (%)']),preco_venda_importado_lote_centavos:Math.round((num(r['Preço Venda Sugerido (R$)'])||0)*100),preco_venda_importado_unidade_centavos:null,preco_calculado_lote_centavos:null};
+  }).filter(x=>x.variante_id&&x.quantidade>0);
+  const batches=chunks(prices,100);
+  for(const [i,b] of batches.entries()){const q=await db.from('nexaprint_faixas_preco').insert(b);if(q.error)throw Error('Preços — lote '+(i+1)+': '+q.error.message);$('progress').value=50+Math.round(((i+1)/batches.length)*50);$('status').textContent='Importando preços: '+Math.min((i+1)*100,prices.length)+' de '+prices.length}
+  $('progress').value=100;$('status').innerHTML='<span class="ok">Importação concluída.</span>';log('Concluído: '+productsMap.size+' produtos, '+variantsMap.size+' configurações e '+prices.length+' faixas de preço.');
+  alert('Base mestra importada com sucesso.');
+ }catch(err){$('status').innerHTML='<span class="err">A importação parou.</span>';log('ERRO: '+err.message);$('import').disabled=false;alert(err.message)}
+};
+init();
+</script></body></html>
