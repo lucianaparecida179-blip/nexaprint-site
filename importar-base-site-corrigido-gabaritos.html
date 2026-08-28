@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importar Base do Site — NEXAPRINT</title>
+<style>
+body{font-family:Inter,Arial,sans-serif;background:#0b1120;color:#e2e8f0;margin:0;padding:32px}
+main{max-width:900px;margin:auto}.card{background:#111827;border:1px solid #243244;border-radius:16px;padding:24px;margin-bottom:18px}
+h1{margin-top:0;color:#fff}.muted{color:#94a3b8}.ok{color:#2dd4bf}.err{color:#f87171}
+button{background:#00d2c4;color:#061016;border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}input[type=file]{width:100%;padding:12px;background:#0b1120;border:1px dashed #475569;border-radius:10px;color:#cbd5e1}
+progress{width:100%;height:18px}pre{white-space:pre-wrap;font-size:13px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body><main>
+<div class="card">
+<h1>Importar Base do Site — NEXAPRINT</h1>
+<p class="muted">Importa produtos, preços, imagens e links de gabarito da planilha NEXAPRINT.</p>
+<p id="auth">Verificando acesso...</p>
+</div>
+<div class="card">
+<label><strong>Selecione NEXAPRINT_IMPORTACAO_SITE.xlsx</strong></label>
+<input id="file" type="file" accept=".xlsx,.xls" disabled>
+<p id="preview" class="muted">Nenhum arquivo selecionado.</p>
+<button id="import" disabled>Importar catálogo para o site</button>
+</div>
+<div class="card">
+<progress id="progress" value="0" max="100"></progress>
+<p id="status" class="muted">Aguardando.</p>
+<pre id="log"></pre>
+</div>
+</main>
+<script>
+const SUPABASE_URL='https://mawebqqjpzfkzuwuwopk.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ElKoJ-b1wV8Lv_2u5mlDIw_9-btNI9A';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=id=>document.getElementById(id);
+let rows=[],schema=null;
+
+const clean=v=>v==null?'':String(v).trim();
+const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function num(v){
+ if(typeof v==='number')return v;
+ if(v==null||v==='')return null;
+ let s=String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.');
+ let n=Number(s); return Number.isFinite(n)?n:null;
+}
+function chunks(a,n){let o=[];for(let i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o}
+function definitions(s){return s.definitions||s.components?.schemas||{}}
+function cols(def){return Object.keys(def?.properties||{}).map(x=>x.toLowerCase())}
+function findTable(defs,names,pred){
+ for(const n of names)if(defs[n])return n;
+ for(const [n,d] of Object.entries(defs))if(pred(cols(d)))return n;
+ return null;
+}
+function field(def,alts){
+ const c=cols(def);
+ return alts.find(x=>c.includes(x))||null;
+}
+function validUrl(v){
+ const s=clean(v);
+ return /^https?:\/\//i.test(s) && !s.includes('<!--') && !s.includes('<div');
+}
+function getTemplateUrl(r){
+ const direct=clean(r.direct_template_url);
+ const template=clean(r.template_url);
+ const page=clean(r.template_page);
+ // A planilha anterior trouxe parte do HTML do fornecedor dentro de template_url.
+ // Nesse caso, usamos a página oficial do produto como fallback, onde o gabarito é disponibilizado.
+ if(validUrl(direct))return direct;
+ if(validUrl(template))return template;
+ if(validUrl(page))return page;
+ return null;
+}
+function makeProductRow(def,r,options){
+ const out={};
+ const map={
+  name:['name','product_name','nome'],
+  category:['category','categoria'],
+  slug:['slug','product_slug'],
+  base_price:['base_price','price','preco','preco_base'],
+  image:['image','image_url','img','imagem','imagem_url'],
+  template_url:['template_url','templateurl','gabarito_url','gabarito'],
+  description:['description','descricao'],
+  quantities:['quantities','quantidades'],
+  options:['options','opcoes']
+ };
+ for(const [target,alts] of Object.entries(map)){
+  const k=field(def,alts); if(!k)continue;
+  let v=null;
+  if(target==='name')v=clean(r.product_name);
+  if(target==='category')v=clean(r.category);
+  if(target==='slug')v=norm(r.product_name)+'-'+norm(r.category);
+  if(target==='base_price')v=num(r.sale_price);
+  if(target==='image')v=clean(r.image_url)||null;
+  if(target==='template_url')v=getTemplateUrl(r);
+  if(target==='description')v=null;
+  if(target==='quantities')v=[];
+  if(target==='options')v=options;
+  if(v!==null)out[k]=v;
+ }
+ return out;
+}
+async function getSchema(){
+ const s=(await db.auth.getSession()).data.session;
+ const r=await fetch(SUPABASE_URL+'/rest/v1/',{
+  headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+s.access_token}
+ });
+ if(!r.ok)throw Error('Não foi possível consultar a estrutura do banco ('+r.status+').');
+ return await r.json();
+}
+async function init(){
+ const {data:{session},error}=await db.auth.getSession();
+ if(error){$('auth').innerHTML='<span class="err">'+error.message+'</span>';return}
+ if(!session){$('auth').innerHTML='<span class="err">Faça login no Painel Administrativo e abra este importador em outra aba.</span>';return}
+ const p=await db.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();
+ if(p.error){$('auth').innerHTML='<span class="err">'+p.error.message+'</span>';return}
+ if(!p.data||p.data.is_admin!==true){$('auth').innerHTML='<span class="err">Esta conta não possui permissão de administrador.</span>';return}
+ $('auth').innerHTML='<span class="ok">Acesso administrativo autorizado.</span>';
+ $('file').disabled=false;
+}
+$('file').addEventListener('change',async e=>{
+ const f=e.target.files[0]; if(!f)return;
+ try{
+  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+  const ws=wb.Sheets['IMPORT_CONFIGURACOES'];
+  if(!ws)throw Error('A aba IMPORT_CONFIGURACOES não foi encontrada.');
+  rows=XLSX.utils.sheet_to_json(ws,{defval:null});
+  if(!rows.length)throw Error('A aba IMPORT_CONFIGURACOES está vazia.');
+  const required=['configuration_id','product_name','category','configuration','size','material','printing','finish','production_days','quantity','cost_price','markup_percent','sale_price','source_url','image_url'];
+  const missing=required.filter(x=>!(x in rows[0]));
+  if(missing.length)throw Error('Colunas ausentes: '+missing.join(', '));
+
+  schema=await getSchema();
+  const defs=definitions(schema);
+  const names=Object.keys(defs);
+  const pt=findTable(defs,['products','product','nexaprint_produtos'],c=>c.includes('name')&&c.includes('category'));
+  const products=new Set(rows.map(r=>norm(r.product_name)+'-'+norm(r.category)).filter(Boolean));
+  const variants=new Set(rows.map(r=>[r.product_name,r.category,r.configuration,r.size,r.material,r.printing,r.finish].map(norm).join('|')));
+
+  $('preview').innerHTML='<span class="ok">'+rows.length.toLocaleString('pt-BR')+' configurações/preços lidos.</span> '+products.size.toLocaleString('pt-BR')+' produtos e '+variants.size.toLocaleString('pt-BR')+' configurações únicas.';
+  $('log').textContent='Estrutura detectada pelo Supabase:\nProdutos: '+(pt||'NÃO ENCONTRADA')+'\n\n';
+
+  if(!pt){
+   $('log').textContent+='Tabelas disponíveis:\n'+names.join(', ');
+   throw Error('Não encontrei a tabela de produtos usada pelo site. Envie um print deste quadro.');
+  }
+  $('import').disabled=false;
+ }catch(err){
+  $('preview').innerHTML='<span class="err">'+err.message+'</span>';
+  rows=[];$('import').disabled=true;
+ }
+});
+async function upsert(table,data,key){
+ for(const [i,b] of chunks(data,100).entries()){
+  const r=await db.from(table).upsert(b,{onConflict:key});
+  if(r.error)throw Error(table+' — lote '+(i+1)+': '+r.error.message);
+ }
+}
+$('import').onclick=async()=>{
+ try{
+  $('import').disabled=true;$('status').textContent='Preparando importação...';
+  const defs=definitions(schema);
+  const pt=findTable(defs,['products','product','nexaprint_produtos'],c=>c.includes('name')&&c.includes('category'));
+  const pdef=defs[pt];
+  const productMap=new Map();
+
+  for(const r of rows){
+   const key=norm(r.product_name)+'-'+norm(r.category);
+   if(!productMap.has(key)){
+    productMap.set(key,{row:makeProductRow(pdef,r,{structuredVariants:[]}),variants:[]});
+   }
+   const item=productMap.get(key);
+   const vk=[r.configuration,r.size,r.material,r.printing,r.finish].map(norm).join('|');
+   let v=item.variants.find(x=>x.__k===vk);
+   if(!v){
+    v={
+     __k:vk,
+     configuration:clean(r.configuration),
+     size:clean(r.size),
+     color:clean(r.printing),
+     material:clean(r.material),
+     finish:clean(r.finish),
+     templateUrl:getTemplateUrl(r),
+     sourceUrl:clean(r.source_url),
+     quantities:[]
+    };
+    item.variants.push(v);
+   }
+   v.quantities.push({
+    qty:Math.round(num(r.quantity)||0),
+    price:num(r.sale_price),
+    days:Math.round(num(r.production_days)||0)
+   });
+  }
+
+  const data=[...productMap.values()].map(x=>{
+   const opts={structuredVariants:x.variants.map(v=>{
+    const y={...v};delete y.__k;return y;
+   })};
+   const row=x.row;
+   const ok=field(pdef,['options','opcoes']);
+   if(ok)row[ok]=opts;
+   return row;
+  });
+
+  const key=field(pdef,['slug','id','name']);
+  if(!key)throw Error('A tabela '+pt+' não possui uma chave utilizável (slug, id ou name).');
+
+  await upsert(pt,data,key);
+  $('progress').value=100;
+  $('status').innerHTML='<span class="ok">Importação concluída.</span>';
+  $('log').textContent+='Produtos gravados: '+data.length.toLocaleString('pt-BR')+'\n';
+  $('log').textContent+='As configurações e preços foram incorporados em options.structuredVariants.';
+  alert('Importação concluída. Produtos: '+data.length.toLocaleString('pt-BR'));
+ }catch(e){
+  $('status').innerHTML='<span class="err">A importação foi interrompida.</span>';
+  $('log').textContent+='\nERRO: '+e.message;
+  alert(e.message);
+  $('import').disabled=false;
+ }
+};
+init();
+</script>
+</body>
+</html>
