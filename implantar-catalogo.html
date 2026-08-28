@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Implantar catálogo — Nexaprint</title>
+<style>
+body{font-family:Inter,Arial,sans-serif;background:#0b1120;color:#e2e8f0;margin:0;padding:32px}
+main{max-width:820px;margin:auto}.card{background:#111827;border:1px solid #243244;border-radius:16px;padding:24px;margin-bottom:18px}
+h1{margin-top:0;color:#fff}.muted{color:#94a3b8}.ok{color:#2dd4bf}.warn{color:#fbbf24}.err{color:#f87171}
+button{background:#00d2c4;color:#061016;border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}progress{width:100%;height:18px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="catalogo-nexaprint.js"></script>
+</head>
+<body>
+<main>
+<div class="card">
+<h1>Implantar catálogo final Nexaprint</h1>
+<p class="muted">Esta página publica o catálogo final da planilha, incluindo imagens da Atual Card, configurações, preços, quantidades e gabaritos encontrados.</p>
+<p id="auth" class="muted">Verificando acesso...</p>
+</div>
+<div class="card">
+<p><strong id="catalog-count">Carregando catálogo...</strong></p>
+<p class="muted">O catálogo final contém <span id="catalog-total">0</span> produtos agrupados. Os novos dados são gravados primeiro; somente depois os produtos antigos que não fazem parte da base final são removidos.</p>
+<button id="deploy" disabled>Implantar catálogo final</button>
+</div>
+<div class="card">
+<progress id="progress" value="0" max="100"></progress>
+<p id="status" class="muted">Aguardando.</p>
+<pre id="log" style="white-space:pre-wrap"></pre>
+</div>
+</main>
+<script>
+const SUPABASE_URL='https://mawebqqjpzfkzuwuwopk.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ElKoJ-b1wV8Lv_2u5mlDIw_9-btNI9A';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const catalog=window.NEXAPRINT_FINAL_CATALOG||[];
+const deployBtn=document.getElementById('deploy');
+const statusEl=document.getElementById('status');
+const authEl=document.getElementById('auth');
+const logEl=document.getElementById('log');
+const progress=document.getElementById('progress');
+document.getElementById('catalog-total').textContent=catalog.length;
+document.getElementById('catalog-count').textContent='Catálogo pronto: '+catalog.length+' produtos.';
+function log(msg,cls){logEl.innerHTML+='<div class="'+(cls||'')+'">'+msg+'</div>';}
+async function init(){
+  const sessionResult=await supabaseClient.auth.getSession();
+  const session=sessionResult.data.session;
+  if(!session){authEl.innerHTML='<span class="err">Você precisa estar logada no site para usar este instalador.</span>';return;}
+  const profileResult=await supabaseClient.from('profiles').select('is_admin,name').eq('id',session.user.id).maybeSingle();
+  const profile=profileResult.data, error=profileResult.error;
+  if(error||!profile||!profile.is_admin){authEl.innerHTML='<span class="err">Acesso negado: esta conta não está marcada como administradora.</span>';return;}
+  authEl.innerHTML='<span class="ok">Acesso autorizado: '+(profile.name||session.user.email)+'</span>';
+  deployBtn.disabled=false;
+}
+function chunks(arr,size){const out=[];for(let i=0;i<arr.length;i+=size)out.push(arr.slice(i,i+size));return out;}
+async function deploy(){
+  if(!catalog.length)return;
+  if(!confirm('Isso vai publicar '+catalog.length+' produtos e remover do catálogo os produtos antigos que não fazem parte da planilha final. Continuar?'))return;
+  deployBtn.disabled=true;logEl.innerHTML='';progress.value=0;
+  try{
+    const existingRes=await supabaseClient.from('products').select('id');
+    if(existingRes.error)throw new Error('Não foi possível ler o catálogo atual: '+existingRes.error.message);
+    const existingIds=(existingRes.data||[]).map(x=>x.id);
+    const newIds=new Set(catalog.map(p=>p.id));
+    const staleIds=existingIds.filter(id=>!newIds.has(id));
+    log('Catálogo atual: '+existingIds.length+' produtos.');
+    log('Catálogo final: '+catalog.length+' produtos.');
+    log('Serão removidos após a publicação: '+staleIds.length+' produtos.');
+    const batches=chunks(catalog,100);
+    for(let i=0;i<batches.length;i++){
+      const rows=batches[i].map(p=>({id:p.id,name:p.name,category:p.category,base_price:p.basePrice,img:p.img,quantities:p.quantities,template_url:p.templateUrl,options:p.options}));
+      const result=await supabaseClient.from('products').upsert(rows,{onConflict:'id'});
+      if(result.error)throw new Error('Erro no lote '+(i+1)+': '+result.error.message);
+      progress.value=Math.round(((i+1)/batches.length)*70);
+      statusEl.textContent='Publicando produtos... '+Math.min((i+1)*100,catalog.length)+' de '+catalog.length;
+    }
+    const staleBatches=chunks(staleIds,100);
+    for(let i=0;i<staleBatches.length;i++){
+      const ids=staleBatches[i]; if(!ids.length)continue;
+      const costResult=await supabaseClient.from('product_costs').delete().in('product_id',ids);
+      if(costResult.error)log('Aviso ao limpar custos antigos: '+costResult.error.message,'warn');
+      const delResult=await supabaseClient.from('products').delete().in('id',ids);
+      if(delResult.error)throw new Error('Os novos produtos foram publicados, mas não foi possível remover todo o catálogo antigo: '+delResult.error.message);
+      progress.value=70+Math.round(((i+1)/Math.max(staleBatches.length,1))*30);
+    }
+    progress.value=100;statusEl.innerHTML='<span class="ok">Implantação concluída.</span>';
+    log('Pronto. '+catalog.length+' produtos finais publicados e '+staleIds.length+' produtos antigos removidos.','ok');
+    alert('Catálogo final implantado com sucesso. Agora abra o site e atualize a página.');
+  }catch(err){
+    statusEl.innerHTML='<span class="err">A implantação parou.</span>';log(err.message,'err');alert(err.message);deployBtn.disabled=false;
+  }
+}
+deployBtn.addEventListener('click',deploy);init();
+</script>
+</body>
+</html>
