@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXAPRINT — Versão Clara e Leve</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;background:#fff;overflow:hidden}
+  #siteFrame{display:block;width:100%;height:100%;border:0;background:#fff}
+</style>
+</head>
+<body>
+<iframe id="siteFrame" title="NEXAPRINT" src="index.html"></iframe>
+<script>
+const frame=document.getElementById('siteFrame');
+const lightCss=`
+html,body{background:#ffffff!important;color:#111827!important}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+.bg-slate-950{background:#ffffff!important}
+.bg-slate-900{background:#f7f9f8!important}
+.bg-slate-800{background:#eef3f1!important}
+.bg-slate-700{background:#d7e1de!important}
+.bg-slate-950\\/60{background:rgba(255,255,255,.92)!important}
+.bg-slate-950\\/90{background:rgba(255,255,255,.96)!important}
+.bg-slate-900\\/80{background:rgba(247,249,248,.96)!important}
+.bg-slate-900\\/90{background:rgba(247,249,248,.96)!important}
+.bg-slate-900\\/60{background:rgba(247,249,248,.92)!important}
+.text-white{color:#111827!important}
+.text-slate-100{color:#17212b!important}
+.text-slate-200{color:#26313b!important}
+.text-slate-300{color:#3f4b55!important}
+.text-slate-400{color:#64727d!important}
+.text-slate-500{color:#7b8790!important}
+.text-brand{color:#009f8f!important}
+.bg-brand{background:#00b49f!important}
+.border-brand{border-color:#00b49f!important}
+.border-slate-800,.border-slate-700,.border-slate-800\\/50,.border-slate-800\\/80{border-color:#e1e8e5!important}
+header.bg-slate-900{background:#ffffff!important;border-color:#e5ebe8!important;box-shadow:0 2px 14px rgba(15,23,42,.06)!important}
+nav.bg-slate-950\\/90{background:#ffffff!important;border-color:#e5ebe8!important}
+.bg-gradient-to-r.from-teal-900.via-cyan-900.to-slate-900{background:linear-gradient(90deg,#e9f8f5,#f5fffd,#e9f8f5)!important;color:#111827!important}
+.from-slate-900{--tw-gradient-from:#f7f9f8 var(--tw-gradient-from-position)!important}
+.via-teal-950\\/40{--tw-gradient-via:#effaf7 var(--tw-gradient-via-position)!important}
+.to-slate-900{--tw-gradient-to:#f7f9f8 var(--tw-gradient-to-position)!important}
+#home-categories-grid>div{aspect-ratio:1/0.86!important;box-shadow:none!important;background:#fff!important;border-color:#e1e8e5!important}
+#home-categories-grid>div>div:nth-of-type(1){display:none!important}
+#home-categories-grid>div>div:nth-of-type(2){position:static!important;inset:auto!important;background:#fff!important;padding:10px 11px 11px!important}
+#home-categories-grid>div>img{position:static!important;display:block!important;width:100%!important;height:170px!important;object-fit:cover!important;filter:none!important;opacity:1!important}
+#home-categories-grid>div h4{color:#111827!important}
+#home-categories-grid>div span{color:#64748b!important}
+#home-categories-grid>div span.text-brand{color:#009f8f!important}
+#home-featured-grid>div{padding:12px!important;box-shadow:none!important}
+#home-featured-grid>div .h-32{height:105px!important}
+#category-page-grid>div{box-shadow:none!important}
+#category-page-grid>div .aspect-square{height:130px!important;aspect-ratio:auto!important}
+#category-page-grid>div .p-3{padding:10px!important}
+#page-home{gap:2.5rem!important}
+#page-home section.pt-6{padding-top:1rem!important}
+#page-home section.pt-6>div{padding:1.6rem!important;box-shadow:none!important}
+#page-home section.pt-6 h2{font-size:2rem!important;line-height:1.08!important}
+#page-product{padding-top:1.5rem!important;padding-bottom:2rem!important}
+#page-product>.grid{gap:1.25rem!important}
+#current-product-img{height:220px!important;object-fit:contain!important;background:#fff!important}
+#page-product .bg-slate-900.rounded-2xl{box-shadow:none!important}
+#page-product .bg-slate-950.rounded-xl{background:#fff!important}
+#page-product .p-6{padding:1rem!important}
+#page-product .sm\\\\:p-8{padding:1.15rem!important}
+#wrap-template-download{background:#f4fbf9;border:1px solid #cfe8e3;border-radius:12px;padding:10px!important}
+#wrap-template-download a{background:#fff!important;border-color:#dce9e6!important}
+button.bg-brand,.bg-brand{background:#00b49f!important}
+button.bg-slate-800{background:#eef3f1!important;color:#17212b!important;border-color:#dce6e2!important}
+input,select,textarea{background:#fff!important;color:#111827!important;border-color:#d7e1de!important}
+input::placeholder,textarea::placeholder{color:#88959e!important}
+#page-admin .bg-slate-900{background:#f7f9f8!important}
+#page-admin .bg-slate-950{background:#fff!important}
+#page-admin .bg-slate-800{background:#eef3f1!important}
+#page-admin .shadow-2xl,#page-admin .shadow-xl{box-shadow:0 6px 22px rgba(15,23,42,.06)!important}
+footer.bg-slate-900{background:#f7f9f8!important;border-color:#e2e9e6!important}
+@media(min-width:768px){
+  #home-categories-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  #home-featured-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  #category-page-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  #category-page-grid>div .aspect-square{height:150px!important}
+  #current-product-img{height:210px!important}
+}
+@media(min-width:1200px){
+  #home-categories-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+}
+`;
+function applyLightSkin(){
+  try{
+    const doc=frame.contentDocument;
+    if(!doc) return;
+    doc.documentElement.classList.add('light');
+    try{doc.defaultView.localStorage.setItem('nexaprint-theme','light')}catch(e){}
+    let style=doc.getElementById('nexaprint-light-skin');
+    if(!style){
+      style=doc.createElement('style');
+      style.id='nexaprint-light-skin';
+      doc.head.appendChild(style);
+    }
+    style.textContent=lightCss;
+  }catch(e){console.error('NEXAPRINT skin error',e)}
+}
+try{localStorage.setItem('nexaprint-theme','light')}catch(e){}
+frame.addEventListener('load',()=>{
+  applyLightSkin();
+  setTimeout(applyLightSkin,500);
+  setTimeout(applyLightSkin,1500);
+  setTimeout(applyLightSkin,3000);
+});
+</script>
+
+<script>
+function installGabaritoFix(){
+  try{
+    const w=frame.contentWindow, d=frame.contentDocument;
+    if(!w || !d || w.__nexaGabaritoFixInstalled) return;
+    w.__nexaGabaritoFixInstalled=true;
+
+    const clean=v=>v==null?'':String(v).trim();
+    const norm=v=>clean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+
+    function getSelected(){
+      const sel={};
+      const map={
+        size:['sel-size','size'],
+        material:['sel-material','material'],
+        color:['sel-color','color'],
+        finish:['sel-cobertura','sel-finish','finish']
+      };
+      Object.entries(map).forEach(([key,ids])=>{
+        for(const id of ids){
+          const el=d.getElementById(id);
+          if(el && clean(el.value)!==''){ sel[key]=clean(el.value); break; }
+        }
+      });
+      // Compatibilidade com a estrutura antiga
+      if(w.structuredSelection && typeof w.structuredSelection==='object'){
+        Object.entries(w.structuredSelection).forEach(([k,v])=>{
+          if(clean(v)) sel[k]=clean(v);
+        });
+      }
+      return sel;
+    }
+
+    function matches(v,sel){
+      const pairs=[
+        ['size',['size','tamanho']],
+        ['material',['material','material_papel','materialPapel']],
+        ['color',['color','cor','impressao','impressão']],
+        ['finish',['finish','cobertura','acabamento']]
+      ];
+      return pairs.every(([logical,keys])=>{
+        if(!sel[logical]) return true;
+        const vv=keys.map(k=>v?.[k]).find(x=>clean(x)!=='');
+        return !vv || norm(vv)===norm(sel[logical]);
+      });
+    }
+
+    function getVariants(){
+      const p=(w.products||[]).find(x=>x.id===w.currentProductId);
+      const fromCurrent=Array.isArray(w.currentProductOptions?.structuredVariants)
+        ? w.currentProductOptions.structuredVariants
+        : [];
+      const fromProduct=Array.isArray(p?.options?.structuredVariants)
+        ? p.options.structuredVariants
+        : [];
+      return fromCurrent.length ? fromCurrent : fromProduct;
+    }
+
+    function update(){
+      const wrap=d.getElementById('wrap-template-download');
+      const link=d.getElementById('template-download-link');
+      if(!wrap || !link) return;
+
+      const p=(w.products||[]).find(x=>x.id===w.currentProductId);
+      const variants=getVariants();
+      const sel=getSelected();
+
+      // Procura a variante exata. Se não houver, NÃO inventa gabarito.
+      let candidates=variants.filter(v=>matches(v,sel));
+
+      // Se a estrutura tem campos de configuração e a seleção atual é completa,
+      // exigimos correspondência desses campos.
+      if(variants.length && candidates.length){
+        const targetKeys=['size','material','color','finish'].filter(k=>sel[k]);
+        if(targetKeys.length){
+          candidates=candidates.filter(v=>{
+            return targetKeys.every(k=>{
+              const vv={size:v.size||v.tamanho,material:v.material||v.material_papel||v.materialPapel,
+                        color:v.color||v.cor||v.impressao||v.impressão,
+                        finish:v.finish||v.cobertura||v.acabamento}[k];
+              return clean(vv)==='' || norm(vv)===norm(sel[k]);
+            });
+          });
+        }
+      }
+
+      let urls=[];
+      candidates.forEach(v=>{
+        if(Array.isArray(v.templateUrls)) urls.push(...v.templateUrls);
+        if(clean(v.templateUrl)) urls.push(v.templateUrl);
+        if(clean(v.template_url)) urls.push(v.template_url);
+        if(Array.isArray(v.template_urls)) urls.push(...v.template_urls);
+      });
+
+      // Compatibilidade: produto só ganha gabarito se não houver variantes estruturadas.
+      if(!variants.length && clean(p?.templateUrl)) urls.push(p.templateUrl);
+      if(!variants.length && clean(p?.template_url)) urls.push(p.template_url);
+
+      urls=[...new Set(urls.map(clean).filter(Boolean))];
+
+      if(urls.length){
+        wrap.classList.remove('hidden');
+        if(link){
+          link.href=urls[0];
+          link.target='_blank';
+          link.rel='noopener';
+        }
+        const title=link.querySelector('p');
+        if(title) title.textContent=urls.length>1 ? 'Baixar Gabaritos deste Produto' : 'Baixar Gabarito deste Produto';
+        const desc=link.querySelector('p.text-\\[11px\\]');
+        if(desc) desc.textContent=urls.length>1 ? `${urls.length} arquivos de gabarito disponíveis para esta configuração.` : 'Use o molde certo pra montar sua arte sem erro de tamanho ou sangria.';
+      }else{
+        wrap.classList.add('hidden');
+        link.removeAttribute('href');
+      }
+
+      // Adiciona links extras quando houver múltiplos gabaritos.
+      let extra=d.getElementById('nexa-extra-gabaritos');
+      if(urls.length>1){
+        if(!extra){
+          extra=d.createElement('div');
+          extra.id='nexa-extra-gabaritos';
+          extra.className='mt-2 space-y-2';
+          wrap.parentNode.insertBefore(extra, wrap.nextSibling);
+        }
+        extra.innerHTML=urls.slice(1).map((u,i)=>`<a href="${u.replace(/"/g,'&quot;')}" target="_blank" rel="noopener" class="flex items-center gap-2 text-xs font-bold text-teal-700 bg-white border border-teal-100 hover:border-teal-400 rounded-lg px-3 py-2"><span>Baixar gabarito ${i+2}</span></a>`).join('');
+      }else if(extra){
+        extra.remove();
+      }
+    }
+
+    // Reaproveita a função existente do site e adiciona a sincronização do gabarito.
+    if(typeof w.goToProduct==='function' && !w.__nexaGoToProductWrapped){
+      const original=w.goToProduct;
+      w.goToProduct=function(id){
+        const result=original.apply(this,arguments);
+        setTimeout(update,50);
+        setTimeout(update,250);
+        setTimeout(update,800);
+        return result;
+      };
+      w.__nexaGoToProductWrapped=true;
+    }
+
+    // Observa qualquer mudança nos selects do configurador.
+    d.addEventListener('change',e=>{
+      if(e.target && e.target.tagName==='SELECT') setTimeout(update,30);
+    },true);
+
+    // Também observa mutações porque o configurador recria selects/HTML.
+    const obs=new MutationObserver(()=>update());
+    const root=d.getElementById('page-product')||d.body;
+    if(root) obs.observe(root,{subtree:true,childList:true});
+
+    setTimeout(update,500);
+    setTimeout(update,1500);
+  }catch(e){console.error('NEXA gabarito:',e)}
+}
+frame.addEventListener('load',()=>setTimeout(installGabaritoFix,100));
+</script>
+
+<script>
+const frame = document.getElementById('siteFrame');
+let imageFixTimer = null;
+
+function uniqUrls(arr){
+  return [...new Set(arr.filter(u => typeof u === 'string' && u.trim()))];
+}
+
+function collectCandidateImages(win){
+  try{
+    const p = win.products?.find(x => x.id === win.currentProductId);
+    if(!p) return [];
+    const candidates = [];
+    if(p.img) candidates.push(p.img);
+
+    const opts = p.options || {};
+    const vs = Array.isArray(opts.structuredVariants) ? opts.structuredVariants : [];
+    const sel = win.structuredSelection || {};
+    const matching = vs.filter(v =>
+      (!sel.size || String(v.size||'') === String(sel.size)) &&
+      (!sel.material || String(v.material||'') === String(sel.material)) &&
+      (!sel.color || String(v.color||'') === String(sel.color)) &&
+      (!sel.finish || String(v.finish||'') === String(sel.finish))
+    );
+    for(const v of matching){
+      candidates.push(v.imageUrl, v.image_url);
+      if(Array.isArray(v.imageUrls)) candidates.push(...v.imageUrls);
+    }
+    for(const v of vs){
+      candidates.push(v.imageUrl, v.image_url);
+    }
+    return uniqUrls(candidates);
+  }catch(e){ return []; }
+}
+
+function installImageRecovery(){
+  try{
+    const doc = frame.contentDocument;
+    const win = frame.contentWindow;
+    if(!doc || !win) return;
+
+    const img = doc.getElementById('current-product-img');
+    if(!img || img.dataset.nexaRecoveryInstalled === '1') return;
+
+    img.dataset.nexaRecoveryInstalled = '1';
+    let tried = [];
+
+    const recover = () => {
+      const candidates = collectCandidateImages(win);
+      const next = candidates.find(u => !tried.includes(u));
+      if(!next) return;
+      tried.push(next);
+      img.src = next;
+    };
+
+    img.addEventListener('error', () => {
+      tried.push(img.src);
+      recover();
+    });
+
+    const originalGo = win.goToProduct;
+    if(typeof originalGo === 'function' && !originalGo.__nexaWrapped){
+      const wrapped = function(id){
+        tried = [];
+        const result = originalGo.apply(this, arguments);
+        setTimeout(()=>{
+          const image = doc.getElementById('current-product-img');
+          if(image && image.dataset.nexaErrorHandled !== '1'){
+            image.dataset.nexaErrorHandled = '1';
+            if(image.complete && image.naturalWidth === 0){
+              image.dispatchEvent(new Event('error'));
+            }
+          }
+        }, 250);
+        return result;
+      };
+      wrapped.__nexaWrapped = true;
+      win.goToProduct = wrapped;
+    }
+  }catch(e){ console.debug('NEXAPRINT image recovery', e); }
+}
+
+function startRecoveryWatcher(){
+  clearInterval(imageFixTimer);
+  imageFixTimer=setInterval(()=>{
+    installImageRecovery();
+    try{
+      const img=frame.contentDocument?.getElementById('current-product-img');
+      if(img && img.complete && img.naturalWidth===0 && img.dataset.nexaAutoTried!=='1'){
+        img.dataset.nexaAutoTried='1';
+        img.dispatchEvent(new Event('error'));
+      }
+    }catch(e){}
+  },700);
+}
+
+frame.addEventListener('load', ()=>{
+  setTimeout(installImageRecovery,400);
+  setTimeout(installImageRecovery,1200);
+  startRecoveryWatcher();
+});
+</script>
+
+</body>
+</html>
